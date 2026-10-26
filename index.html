@@ -3,24 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pencatatan Keuangan</title>
+    <title>Pencatatan Keuangan CRUD</title>
     
-    <!-- Konfigurasi PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#28a745">
     <link rel="apple-touch-icon" href="icon-192.png">
 
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
         label { font-weight: bold; margin-top: 10px; display: block; }
         input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
-        button { margin-top: 20px; padding: 10px; width: 100%; background: #28a745; color: white; border: none; cursor: pointer; }
+        button { margin-top: 10px; padding: 10px; width: 100%; background: #28a745; color: white; border: none; cursor: pointer; }
         button:hover { background: #218838; }
+        .btn-batal { background: #dc3545; display: none; }
+        .btn-batal:hover { background: #c82333; }
+        
+        /* Gaya untuk tabel */
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 14px; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 10px; text-align: left; }
+        th { background-color: #f2f2f2; }
+        .btn-aksi { padding: 5px 10px; margin: 2px; cursor: pointer; color: white; border: none; font-size: 12px;}
+        .btn-edit { background-color: #ffc107; color: black; }
+        .btn-hapus { background-color: #dc3545; }
     </style>
 </head>
 <body>
     <h2>Form Pencatatan Keuangan</h2>
     <form id="formKeuangan">
+        <!-- Input tersembunyi untuk ID dan Action (insert/update) -->
+        <input type="hidden" id="id" name="id">
+        <input type="hidden" id="action" name="action" value="insert">
+
         <label>Tanggal:</label>
         <input type="date" id="tanggal" name="tanggal" required>
         
@@ -33,50 +47,155 @@
         <label>Uang Keluar (Rp):</label>
         <input type="number" id="uang_keluar" name="uang_keluar" value="0">
         
-        <button type="submit" id="submitBtn">Simpan Data</button>
+        <button type="submit" id="submitBtn">Simpan Data Baru</button>
+        <button type="button" id="cancelBtn" class="btn-batal" onclick="resetForm()">Batal Edit</button>
     </form>
 
-    <script>
-        // ==========================================
-        // 1. KODE UNTUK MENGIRIM DATA KE GOOGLE SHEET
-        // ==========================================
-        // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbxcaXmqlJx1Xs9xdZemB_fGr1gJRzZQE3qAKJymHwW7efb2ktdtnnswUWxbNQq1o7t1Kg/exec'; 
-        const form = document.getElementById('formKeuangan');
-        const btn = document.getElementById('submitBtn');
+    <h3 style="margin-top: 40px;">Data Transaksi <button onclick="loadData()" style="width:auto; padding:5px 10px; margin-left:10px; font-size:12px;">Muat Ulang</button></h3>
+    <table>
+        <thead>
+            <tr>
+                <th>Tanggal</th>
+                <th>Keterangan</th>
+                <th>Masuk</th>
+                <th>Keluar</th>
+                <th>Aksi</th>
+            </tr>
+        </thead>
+        <tbody id="tableBody">
+            <tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>
+        </tbody>
+    </table>
 
-        form.addEventListener('submit', e => {
-            e.preventDefault();
-            btn.innerHTML = "Menyimpan...";
-            
-            let requestBody = new FormData(form);
-            fetch(scriptURL, { method: 'POST', body: requestBody })
-                .then(response => {
-                    alert('Data berhasil disimpan ke Google Sheet!');
-                    form.reset();
-                    btn.innerHTML = "Simpan Data";
+    <script>
+        // GANTI URL DI BAWAH INI
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxcaXmqlJx1Xs9xdZemB_fGr1gJRzZQE3qAKJymHwW7efb2ktdtnnswUWxbNQq1o7t1Kg/exec'; 
+        
+        const form = document.getElementById('formKeuangan');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelBtn = document.getElementById('cancelBtn');
+        const tableBody = document.getElementById('tableBody');
+
+        // ==========================================
+        // READ: FUNGSI MEMUAT DATA KE TABEL
+        // ==========================================
+        function loadData() {
+            tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Memuat data...</td></tr>';
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    tableBody.innerHTML = '';
+                    if(data.length === 0) {
+                        tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center;">Belum ada data.</td></tr>';
+                        return;
+                    }
+                    data.forEach(row => {
+                        // Memformat tanggal agar lebih rapi
+                        let tgl = new Date(row.tanggal).toLocaleDateString('id-ID');
+                        
+                        let tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${tgl !== 'Invalid Date' ? tgl : row.tanggal}</td>
+                            <td>${row.keterangan}</td>
+                            <td>${row.uang_masuk}</td>
+                            <td>${row.uang_keluar}</td>
+                            <td>
+                                <button class="btn-aksi btn-edit" onclick="editData('${row.id}', '${row.tanggal}', '${row.keterangan}', ${row.uang_masuk}, ${row.uang_keluar})">Edit</button>
+                                <button class="btn-aksi btn-hapus" onclick="deleteData('${row.id}')">Hapus</button>
+                            </td>
+                        `;
+                        tableBody.appendChild(tr);
+                    });
                 })
                 .catch(error => {
-                    console.error('Error!', error.message);
-                    alert('Gagal menyimpan data.');
-                    btn.innerHTML = "Simpan Data";
+                    tableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: red;">Gagal memuat data!</td></tr>';
+                });
+        }
+
+        // ==========================================
+        // CREATE & UPDATE: FUNGSI SIMPAN FORM
+        // ==========================================
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            submitBtn.innerHTML = "Menyimpan...";
+            submitBtn.disabled = true;
+            
+            let requestBody = new FormData(form);
+            
+            fetch(scriptURL, { method: 'POST', body: requestBody })
+                .then(response => response.json())
+                .then(result => {
+                    alert('Data berhasil disimpan!');
+                    resetForm();
+                    loadData(); // Muat ulang tabel
+                })
+                .catch(error => alert('Gagal menyimpan data!'))
+                .finally(() => {
+                    submitBtn.innerHTML = "Simpan Data";
+                    submitBtn.disabled = false;
                 });
         });
 
         // ==========================================
-        // 2. KODE UNTUK SERVICE WORKER PWA
+        // UPDATE: FUNGSI MEMASUKKAN DATA KE FORM
         // ==========================================
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(registration => {
-                        console.log('ServiceWorker berhasil didaftarkan:', registration.scope);
-                    })
-                    .catch(error => {
-                        console.log('ServiceWorker gagal didaftarkan:', error);
-                    });
-            });
+        function editData(id, tanggal, keterangan, masuk, keluar) {
+            // Format ulang string tanggal ke YYYY-MM-DD agar masuk ke input type="date"
+            let dateObj = new Date(tanggal);
+            let formattedDate = dateObj.getFullYear() + '-' + String(dateObj.getMonth() + 1).padStart(2, '0') + '-' + String(dateObj.getDate()).padStart(2, '0');
+            
+            document.getElementById('id').value = id;
+            document.getElementById('action').value = 'update';
+            
+            // Handle jika tanggal tidak valid karena format dari Google Sheets
+            if(formattedDate !== 'NaN-NaN-NaN') { document.getElementById('tanggal').value = formattedDate; } 
+            else { document.getElementById('tanggal').value = tanggal.split('T')[0]; }
+
+            document.getElementById('keterangan').value = keterangan;
+            document.getElementById('uang_masuk').value = masuk;
+            document.getElementById('uang_keluar').value = keluar;
+
+            submitBtn.innerHTML = "Update Data";
+            cancelBtn.style.display = "block";
+            window.scrollTo(0, 0); // Scroll ke atas
         }
+
+        // ==========================================
+        // DELETE: FUNGSI MENGHAPUS DATA
+        // ==========================================
+        function deleteData(id) {
+            if(confirm("Yakin ingin menghapus data ini?")) {
+                let formData = new FormData();
+                formData.append('id', id);
+                formData.append('action', 'delete');
+
+                fetch(scriptURL, { method: 'POST', body: formData })
+                    .then(response => response.json())
+                    .then(result => {
+                        alert('Data berhasil dihapus!');
+                        loadData(); // Muat ulang tabel
+                    })
+                    .catch(error => alert('Gagal menghapus data!'));
+            }
+        }
+
+        function resetForm() {
+            form.reset();
+            document.getElementById('id').value = '';
+            document.getElementById('action').value = 'insert';
+            submitBtn.innerHTML = "Simpan Data Baru";
+            cancelBtn.style.display = "none";
+            document.getElementById('uang_masuk').value = 0;
+            document.getElementById('uang_keluar').value = 0;
+        }
+
+        // Jalankan fungsi PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+        }
+
+        // Muat data saat halaman pertama kali dibuka
+        window.addEventListener('load', loadData);
     </script>
 </body>
 </html>
