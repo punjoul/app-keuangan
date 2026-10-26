@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pencatatan Keuangan</title>
+    
+    <!-- Konfigurasi PWA -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#28a745">
+    <link rel="apple-touch-icon" href="icon-192.png">
+
     <style>
         body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
         label { font-weight: bold; margin-top: 10px; display: block; }
@@ -31,6 +37,9 @@
     </form>
 
     <script>
+        // ==========================================
+        // 1. KODE UNTUK MENGIRIM DATA KE GOOGLE SHEET
+        // ==========================================
         // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
         const scriptURL = 'https://script.google.com/macros/s/AKfycbxcaXmqlJx1Xs9xdZemB_fGr1gJRzZQE3qAKJymHwW7efb2ktdtnnswUWxbNQq1o7t1Kg/exec'; 
         const form = document.getElementById('formKeuangan');
@@ -53,6 +62,21 @@
                     btn.innerHTML = "Simpan Data";
                 });
         });
+
+        // ==========================================
+        // 2. KODE UNTUK SERVICE WORKER PWA
+        // ==========================================
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('ServiceWorker berhasil didaftarkan:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker gagal didaftarkan:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
