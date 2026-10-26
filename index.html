@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pencatatan Keuangan</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 400px; margin: auto; }
+        label { font-weight: bold; margin-top: 10px; display: block; }
+        input { width: 100%; padding: 8px; margin-top: 5px; box-sizing: border-box; }
+        button { margin-top: 20px; padding: 10px; width: 100%; background: #28a745; color: white; border: none; cursor: pointer; }
+        button:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <h2>Form Pencatatan Keuangan</h2>
+    <form id="formKeuangan">
+        <label>Tanggal:</label>
+        <input type="date" id="tanggal" name="tanggal" required>
+        
+        <label>Keterangan:</label>
+        <input type="text" id="keterangan" name="keterangan" placeholder="Contoh: Beli Makan" required>
+        
+        <label>Uang Masuk (Rp):</label>
+        <input type="number" id="uang_masuk" name="uang_masuk" value="0">
+        
+        <label>Uang Keluar (Rp):</label>
+        <input type="number" id="uang_keluar" name="uang_keluar" value="0">
+        
+        <button type="submit" id="submitBtn">Simpan Data</button>
+    </form>
+
+    <script>
+        // GANTI URL DI BAWAH INI DENGAN URL WEB APP GOOGLE SCRIPT ANDA
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxcaXmqlJx1Xs9xdZemB_fGr1gJRzZQE3qAKJymHwW7efb2ktdtnnswUWxbNQq1o7t1Kg/exec'; 
+        const form = document.getElementById('formKeuangan');
+        const btn = document.getElementById('submitBtn');
+
+        form.addEventListener('submit', e => {
+            e.preventDefault();
+            btn.innerHTML = "Menyimpan...";
+            
+            let requestBody = new FormData(form);
+            fetch(scriptURL, { method: 'POST', body: requestBody })
+                .then(response => {
+                    alert('Data berhasil disimpan ke Google Sheet!');
+                    form.reset();
+                    btn.innerHTML = "Simpan Data";
+                })
+                .catch(error => {
+                    console.error('Error!', error.message);
+                    alert('Gagal menyimpan data.');
+                    btn.innerHTML = "Simpan Data";
+                });
+        });
+    </script>
+</body>
+</html>
